@@ -2,111 +2,66 @@
 
 ## 💻 O Desafio Técnico
 
-Desenvolva um **modelo de Visão Computacional** capaz de **classificar dígitos manuscritos (0-9)**, e posteriormente **otimize-o para execução em dispositivos Edge**.
-
-O foco não é apenas obter alta acurácia, mas **compreender o fluxo completo**:
-
-**treinamento → validação → salvamento → conversão → otimização**
-
-## 🎯 Conjunto de Dados
-
-Dataset **MNIST**, disponível diretamente via `tf.keras.datasets.mnist` (não é necessário download manual).
-
-## ✅ Requisitos Obrigatórios
-
-### Etapa 1 — Treinamento do Modelo (`train_model.py`)
-
-Implemente:
-
-- Carregamento do dataset MNIST via TensorFlow
-- **Split explícito treino/validação** (ex: `validation_split` ou um split manual)
-- Construção de uma CNN com:
-  - **3 a 4 blocos convolucionais** (`Conv2D` + `BatchNormalization` + `MaxPooling2D`)
-  - Camada de `Dropout` antes da saída, para regularização
-- Treinamento com **early stopping** baseado na perda de validação (`EarlyStopping`)
-- Exibição da **acurácia de validação final** no terminal
-- Salvamento do modelo treinado em formato Keras (`model.h5`)
-
-### Etapa 2 — Otimização do Modelo (`optimize_model.py`)
-
-Implemente:
-
-- Carregamento do `model.h5` treinado
-- Conversão para **TensorFlow Lite** (`model.tflite`)
-- Aplicação de uma técnica de otimização (ex: **Dynamic Range Quantization**)
-
-### Etapa 3 — Inferência com o Modelo Otimizado (`run_inference.py`)
-
-Implemente:
-
-- Carregamento especificamente do **`model.tflite`** (o artefato de edge — não
-  o `model.h5`) usando `tf.lite.Interpreter`
-- Execução de inferência em pelo menos **5 amostras** do conjunto de teste
-- Exibição no terminal, para cada amostra, da classe **predita** vs. a classe **real**
-
-> 💡 Essa etapa existe porque uma métrica agregada (accuracy) pode esconder
-> problemas que só aparecem olhando exemplos individuais. Também é o teste mais
-> próximo do uso real em produção: carregar o artefato de edge e classificar
-> uma entrada por vez.
-
-**Objetivo:** reduzir o tamanho do modelo, mantendo desempenho adequado para aplicações de Edge AI.
-
-## 📂 Estrutura da Pasta
-
-⚠️ Não altere os nomes dos arquivos.
-
-```
-projetos/1-classificacao-mnist/
-├── train_model.py         # ✏️ Treinamento do modelo
-├── optimize_model.py      # ✏️ Conversão e otimização
-├── run_inference.py       # ✏️ Inferência de exemplo com o modelo otimizado
-├── requirements.txt       # 📄 Dependências do projeto
-├── model.h5               # 🤖 Gerado por você — deve ser commitado
-├── model.tflite           # ⚡ Gerado por você — deve ser commitado
-└── README.md               # 📝 Este arquivo (também usado como relatório)
-```
-
-## ⚠️ Restrições e Considerações de Engenharia
-
-- Entrada do modelo: imagens 28x28, 1 canal (grayscale), normalizadas em [0, 1]
-- CNN simples — evite arquiteturas muito profundas
-- Não utilize modelos pré-treinados
-- Número de épocas limitado (ex: até 15, com early stopping)
-- Treinamento apenas em CPU
-
-## ⚖️ Critérios de Avaliação
-
-- **Funcionalidade** — execução correta dos scripts e geração dos arquivos `.h5` e `.tflite`
-- **Qualidade do modelo** — acurácia de validação consistente com o esperado para o dataset
-- **Edge AI** — conversão correta para `.tflite` com técnica de otimização aplicada
-- **Documentação** — preenchimento adequado do relatório abaixo
-
----
-
 ## 📝 Relatório do Candidato
 
-👤 **Nome Completo:**
+👤 **Nome Completo:** Henrique Oliveira Rodrigues
 
 ### 1️⃣ Resumo da Arquitetura do Modelo
 
-Descreva, em palavras, a arquitetura da CNN implementada em `train_model.py` (número de blocos convolucionais, uso de batch normalization/dropout, estratégia de validação/early stopping).
+A arquitetura implementada em `train_model.py` foi projetada utilizando uma Rede Neural Convolucional sequencial focada em eficiência para Edge AI. A rede é composta por:
+* 3 Blocos Convolucionais: Cada bloco utiliza camadas `Conv2D` com ativação ReLU (com progressão de 32, 64 e 128 filtros, kernel 3x3), seguidas por `BatchNormalization` para estabilizar a distribuição das ativações durante o treino e `MaxPooling2D` (pool 2x2) para redução espacial e invariância a translações.
+* Camada de Regularização: Aplicação explícita de `Dropout(0.5)` logo após a camada densa intermediária (64 neurônios) e antes da camada de saída, prevenindo overfitting.
+* Camada de Saída: Camada `Dense` com 10 neurônios e ativação `softmax`, representando a distribuição de probabilidade das 10 classes numéricas.
+* Estratégia de Validação: Utilização de split explícito de 10% dos dados para validação em conjunto com callback de `EarlyStopping` monitorando a perda de validação (`val_loss`, paciência = 3), garantindo a restauração automática dos melhores pesos do treinamento.
 
 ### 2️⃣ Bibliotecas Utilizadas
 
-Liste as principais bibliotecas utilizadas, preferencialmente com suas versões.
+* TensorFlow / Keras: Utilizada como framework principal para processamento do dataset MNIST, modelagem da CNN, compilação, treinamento e exportação/conversão para Edge AI.
+* NumPy: Utilizada para manipulação matricial de tensores, normalização em ponto flutuante e dimensionamento de canais, além da amostragem aleatória controlada na inferência.
+* OS: Utilizada para verificação de existência de arquivos locais e cálculo métrico comparativo de tamanho de arquivos em disco.
 
 ### 3️⃣ Técnica de Otimização do Modelo
 
-Explique qual técnica foi utilizada para otimizar o modelo em `optimize_model.py`.
+A técnica aplicada em `optimize_model.py` foi a Quantização de Alcance Dinâmico (Dynamic Range Quantization), implementada via `tf.lite.Optimize.DEFAULT` no conversor do TensorFlow Lite. 
+Essa abordagem analisa os pesos da rede neural e os quantiza para números inteiros de 8 bits durante o armazenamento do arquivo. Durante a execução da inferência na borda, os pesos são desquantizados dinamicamente, permitindo uma drástica redução na pegada de memória sem necessitar de um dataset de calibração extra e preservando a precisão matemática da rede.
 
 ### 4️⃣ Resultados Obtidos
 
-Informe a acurácia de validação obtida e o tamanho dos arquivos `model.h5` e `model.tflite`.
+* Acurácia de Validaçao Final: ~99.33%.
+* Tamanho do arquivo original (`model.h5`): 2.709,56 KB.
+* Tamanho do modelo otimizado (`model.tflite`): 234,52 KB.
+* Taxa de Redução de Tamanho: 91,34% de economia de memória.
 
 ### 5️⃣ Comentários Adicionais (Opcional)
 
-Dificuldades encontradas, decisões técnicas importantes, limitações do modelo, aprendizados durante o desafio.
-
 ### 6️⃣ Exemplo de Inferência
 
-Cole a saída do terminal ao rodar `run_inference.py` (predito vs. real para as 5+ amostras), e comente brevemente se houve algum caso interessante (acerto ou erro) entre as amostras testadas.
+Abaixo, a saída gerada pela execução de 10 amostras aleatórias via `run_inference.py` utilizando o interpretador do arquivo de borda:
+
+```text
+==============================================================
+Amostra      | Classe Real    | Classe Predita | Resultado
+==============================================================
+Amostra #1   | Digito: 6      | Predito: 6     | Acerto
+--------------------------------------------------------------
+Amostra #2   | Digito: 2      | Predito: 2     | Acerto
+--------------------------------------------------------------
+Amostra #3   | Digito: 3      | Predito: 3     | Acerto
+--------------------------------------------------------------
+Amostra #4   | Digito: 7      | Predito: 7     | Acerto
+--------------------------------------------------------------
+Amostra #5   | Digito: 2      | Predito: 2     | Acerto
+--------------------------------------------------------------
+Amostra #6   | Digito: 2      | Predito: 2     | Acerto
+--------------------------------------------------------------
+Amostra #7   | Digito: 3      | Predito: 3     | Acerto
+--------------------------------------------------------------
+Amostra #8   | Digito: 4      | Predito: 4     | Acerto
+--------------------------------------------------------------
+Amostra #9   | Digito: 7      | Predito: 7     | Acerto
+--------------------------------------------------------------
+Amostra #10  | Digito: 6      | Predito: 6     | Acerto
+--------------------------------------------------------------
+Total de acertos: 10/10 | Acurácia: 100.00%
+```
+Em todas as 10 amostras testadas aleatoriamente, o modelo quantizado obteve assertividade de 100%. Isso comprova que o artefato `.tflite` gerado manteve a capacidade de generalização da rede original, sendo ideal para implantação em microcontroladores e sistemas embarcados.
